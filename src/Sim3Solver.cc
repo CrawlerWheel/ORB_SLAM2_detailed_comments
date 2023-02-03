@@ -50,6 +50,7 @@ namespace ORB_SLAM2
  * @param[in] pKF2              候选的闭环关键帧
  * @param[in] vpMatched12       通过词袋模型加速匹配所得到的,两帧特征点的匹配关系所得到的地图点,本质上是来自于候选闭环关键帧的地图点
  * @param[in] bFixScale         当前传感器类型的输入需不需要计算尺度。单目的时候需要，双目和RGBD的时候就不需要了
+ * ??输入的参数已经包含了 两个关键帧在全局坐标系下的位姿，输入的地图点也是全局坐标，所以再求出两帧之间的变换有啥意义呢？
  */
 Sim3Solver::Sim3Solver(KeyFrame *pKF1, KeyFrame *pKF2, const vector<MapPoint *> &vpMatched12, const bool bFixScale):
     mnIterations(0), mnBestInliers(0), mbFixScale(bFixScale)
@@ -64,6 +65,8 @@ Sim3Solver::Sim3Solver(KeyFrame *pKF1, KeyFrame *pKF2, const vector<MapPoint *> 
     mN1 = vpMatched12.size();
 
     // 预分配空间，在后面使用
+    // 统一用了vpMatched12的长度，也就暗示了采用了等长数组实现对应关系的存储的策略
+    // 另外，数组过长的情况可以采用哈希表提高效率
     mvpMapPoints1.reserve(mN1);
     mvpMapPoints2.reserve(mN1);
     mvpMatches12 = vpMatched12;
@@ -401,6 +404,7 @@ void Sim3Solver::ComputeSim3(cv::Mat &P1, cv::Mat &P2)
     // Step 6: 计算尺度因子 Scale
     if(!mbFixScale)
     {
+        //运用了PPT 中P6的尺度因子求解公式
         // 论文中有2个求尺度方法。一个是p632右中的位置，考虑了尺度的对称性
         // 代码里实际使用的是另一种方法，这个公式对应着论文中p632左中位置的那个
         // Pr1 对应论文里的r_r,i',P3对应论文里的 r_l,i',(经过坐标系转换的Pr2), n=3, 剩下的就和论文中都一样了
