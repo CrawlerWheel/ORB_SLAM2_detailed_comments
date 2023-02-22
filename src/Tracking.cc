@@ -412,7 +412,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im,const double &timestamp)
     return mCurrentFrame.mTcw.clone();
 }
 
-/*
+/**
  * @brief Main tracking function. It is independent of the input sensor.
  *
  * track包含两部分：估计运动、跟踪局部地图
@@ -427,6 +427,7 @@ void Tracking::Track()
     
     // mState为tracking的状态，包括 SYSTME_NOT_READY, NO_IMAGE_YET, NOT_INITIALIZED, OK, LOST
     // 如果图像复位过、或者第一次运行，则为NO_IMAGE_YET状态
+    // mState 是一个状态机
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;
@@ -467,6 +468,7 @@ void Tracking::Track()
         // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
         // mbOnlyTracking等于false表示正常SLAM模式（定位+地图更新），mbOnlyTracking等于true表示仅定位模式
         // tracking 类构造时默认为false。在viewer中有个开关ActivateLocalizationMode，可以控制是否开启mbOnlyTracking
+        // TODO 为什么 定位+地图更新 的模式会比仅仅跟踪的模式 跟踪逻辑简单这么多？？？
         if(!mbOnlyTracking)
         {
             // Local Mapping is activated. This is the normal behaviour, unless
@@ -575,6 +577,7 @@ void Tracking::Track()
                     }
 
                     // Step 2.4 使用重定位的方法来得到当前帧的位姿
+                    // TODO  还有三个重要部分待看 基于恒定运动模型的跟踪 UpdateLastFrame 关键帧的构建
                     bOKReloc = Relocalization();
 
                     // Step 2.5 根据前面的恒速模型、重定位结果来更新状态
@@ -731,8 +734,9 @@ void Tracking::Track()
             mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
         // 保存上一帧的数据,当前帧变上一帧
+        // mLastFrame是进行了拷贝，而不是使用和相关帧同一个实体对象，推测：临时3D点随便往里头加，跟踪完一帧就不要了！ 最后变成一个匿名对象代系统回收
         mLastFrame = Frame(mCurrentFrame);
-    }
+    }//初始化以外（NOT_INITIALIZED）的 else
 
     // Store frame pose information to retrieve the complete camera trajectory afterwards.
     // Step 11：记录位姿信息，用于最后保存所有的轨迹
@@ -1114,7 +1118,7 @@ void Tracking::CreateInitialMapMonocular()
     mState=OK;// 初始化成功，至此，初始化过程完成
 }
 
-/*
+/**
  * @brief 检查上一帧中的地图点是否需要被替换
  * 
  * Local Mapping线程可能会将关键帧中某些地图点进行替换，由于tracking中需要用到上一帧地图点，所以这里检查并更新上一帧中被替换的地图点
@@ -1209,7 +1213,7 @@ bool Tracking::TrackReferenceKeyFrame()
 }
 
 /**
- * @brief 更新上一帧位姿，在上一帧中生成临时地图点
+ * @brief 上一帧位姿可能已经被其他线程优化，更新上一帧位姿，在上一帧中生成临时地图点
  * 单目情况：只计算了上一帧的世界坐标系位姿
  * 双目和rgbd情况：选取有有深度值的并且没有被选为地图点的点生成新的临时地图点，提高跟踪鲁棒性
  */
@@ -1298,6 +1302,7 @@ void Tracking::UpdateLastFrame()
         else
         {
             // 因为从近到远排序，记录其中不需要创建地图点的个数
+            // TODO 这么操作nPoints有什么意义？
             nPoints++;
         }
 
@@ -1305,6 +1310,7 @@ void Tracking::UpdateLastFrame()
         // 停止新增临时地图点必须同时满足以下条件：
         // 1、当前的点的深度已经超过了设定的深度阈值（35倍基线）
         // 2、nPoints已经超过100个点，说明距离比较远了，可能不准确，停掉退出
+
         if(vDepthIdx[j].first>mThDepth && nPoints>100)
             break;
     }
@@ -1381,6 +1387,7 @@ bool Tracking::TrackWithMotionModel()
             }
             else if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
                 // 累加成功匹配到的地图点数目
+                // TODO 这里我感觉 临时添加的地图点并没有参与记数，仅仅是帮助上文中优化算法进行位姿结算
                 nmatchesMap++;
         }
     }    
@@ -1817,7 +1824,7 @@ void Tracking::UpdateLocalMap()
     UpdateLocalPoints();
 }
 
-/*
+/**
  * @brief 更新局部关键点。先把局部地图清空，然后将局部关键帧的有效地图点添加到局部地图中
  */
 void Tracking::UpdateLocalPoints()
@@ -1959,8 +1966,8 @@ void Tracking::UpdateLocalKeyFrames()
                 }
             }
         }
-
-        // 类型3:将一级共视关键帧的子关键帧作为局部关键帧（将邻居的孩子们拉拢入伙）
+        //TODO 啥是子关键帧和父关键帧的概念？
+        //类型3:将一级共视关键帧的子关键帧作为局部关键帧（将邻居的孩子们拉拢入伙）
         const set<KeyFrame*> spChilds = pKF->GetChilds();
         for(set<KeyFrame*>::const_iterator sit=spChilds.begin(), send=spChilds.end(); sit!=send; sit++)
         {
@@ -2129,7 +2136,7 @@ bool Tracking::Relocalization()
                 
                 // EPnP 里RANSAC后的内点的集合
                 set<MapPoint*> sFound;
-
+                //size 就是当前帧特帧点的总和，不然对应关系没法组织
                 const int np = vbInliers.size();
                 //遍历所有内点
                 for(int j=0; j<np; j++)
@@ -2157,7 +2164,7 @@ bool Tracking::Relocalization()
 
                 // If few inliers, search by projection in a coarse window and optimize again
                 // Step 4.3：如果内点较少，则通过投影的方式对之前未匹配的点进行匹配，再进行优化求解
-                // 前面的匹配关系是用词袋匹配过程得到的
+                // 前面的匹配关系是用词袋匹配过程得到的，并且匹配数量经过了上述两轮的精炼（外点剔除）
                 if(nGood<50)
                 {
                     // 通过投影的方式将关键帧中未匹配的地图点投影到当前帧中, 生成新的匹配

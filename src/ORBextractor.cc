@@ -78,7 +78,7 @@ namespace ORB_SLAM2
 
 const int PATCH_SIZE = 31;			///<使用灰度质心法计算特征点的方向信息时，图像块的大小,或者说是直径
 const int HALF_PATCH_SIZE = 15;		///<上面这个大小的一半，或者说是半径
-const int EDGE_THRESHOLD = 19;		///<算法生成的图像边
+const int EDGE_THRESHOLD = 19;		///<算法生成的图像边 为了进行高斯模糊而预留的区域
 //生成这个边的目的是进行图像金子塔的生成时，需要对图像进行高斯滤波处理，为了考虑到使滤波后的图像边界处的像素也能够携带有正确的图像信息，
 //这里作者就将原图像扩大了一个边。
 
@@ -1045,7 +1045,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
 	//图像cell的尺寸，是个正方形，可以理解为边长in像素坐标
     const float W = 30;
 
-    // 对每一层图像做处理
+    //对每一层图像做处理
 	//遍历所有图像
     for (int level = 0; level < nlevels; ++level)
     {
@@ -1172,7 +1172,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
             keypoints[i].pt.y+=minBorderY;
 			//记录特征点来源的图像金字塔图层
             keypoints[i].octave=level;
-			//记录计算方向的patch，缩放后对应的大小， 又被称作为特征点半径
+			//记录计算方向的patch，缩放后对应的大小，又被称作为特征点半径
             keypoints[i].size = scaledPatchSize;
         }
     }

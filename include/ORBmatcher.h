@@ -132,7 +132,7 @@ public:
     // Search matches between MapPoints in a KeyFrame and ORB in a Frame.
     // Brute force constrained to ORB that belong to the same vocabulary node (at a certain level)
     // Used in Relocalisation and Loop Detection
-    /*
+    /**
     * @brief 通过词袋，对关键帧的特征点进行跟踪
     * 步骤
     * Step 1：分别取出属于同一node的ORB特征点(只有属于同一node，才有可能是匹配点)

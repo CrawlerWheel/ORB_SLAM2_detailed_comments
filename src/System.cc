@@ -95,7 +95,7 @@ System::System(const string &strVocFile,					//词典文件路径
     mpMap = new Map();
 
     //Create Drawers. These are used by the Viewer
-    //这里的帧绘制器和地图绘制器将会被可视化的Viewer所使用
+    //这里的帧绘制器和地图绘制器将会被可视化的Viewer所使用 TODO？为什么帧绘制器是用map初始化
     mpFrameDrawer = new FrameDrawer(mpMap);
     mpMapDrawer = new MapDrawer(mpMap, strSettingsFile);
 
@@ -114,7 +114,7 @@ System::System(const string &strVocFile,					//词典文件路径
     //初始化局部建图线程并运行
     //Initialize the Local Mapping thread and launch
     mpLocalMapper = new LocalMapping(mpMap, 				//指定使iomanip
-    								 mSensor==MONOCULAR);	// TODO 为什么这个要设置成为MONOCULAR？？？
+    								 mSensor==MONOCULAR);
     //运行这个局部建图线程
     mptLocalMapping = new thread(&ORB_SLAM2::LocalMapping::Run,	//这个线程会调用的函数
     							 mpLocalMapper);				//这个调用函数的参数
@@ -198,7 +198,7 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, 		//左侧图像
             mpTracker->InformOnlyTracking(false);
             //局部建图器要开始工作呢
             mpLocalMapper->Release();
-            //清楚标志
+            //清除标志
             mbDeactivateLocalizationMode = false;// 防止重复执行
         }//如果取消定位模式
     }//检查是否有模式的改变
@@ -410,10 +410,10 @@ void System::Shutdown()
         usleep(5000);
     }
 
-    if(mpViewer)
-    	//如果使用了可视化的窗口查看器执行这个
-    	// TODO 但是不明白这个是做什么的。如果我注释掉了呢？
-        pangolin::BindToContext("ORB-SLAM2: Map Viewer");
+//    if(mpViewer)
+//    	//如果使用了可视化的窗口查看器执行这个
+//    	// TODO 但是不明白这个是做什么的。如果我注释掉了呢？
+//        pangolin::BindToContext("ORB-SLAM2: Map Viewer");
 }
 
 //按照TUM格式保存相机运行轨迹并保存到指定的文件中

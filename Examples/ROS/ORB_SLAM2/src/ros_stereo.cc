@@ -108,13 +108,15 @@ int main(int argc, char **argv)
     }
 
     ros::NodeHandle nh;
-
+    //队列设置为1，应该是为了时效性
     message_filters::Subscriber<sensor_msgs::Image> left_sub(nh, "/camera/left/image_raw", 1);
     message_filters::Subscriber<sensor_msgs::Image> right_sub(nh, "camera/right/image_raw", 1);
+    //同步协议：时间戳相近，进行时间戳对齐
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), left_sub,right_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabStereo,&igb,_1,_2));
 
+    //不断执行回调函数
     ros::spin();
 
     // Stop all threads
@@ -124,6 +126,7 @@ int main(int argc, char **argv)
     SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory_TUM_Format.txt");
     SLAM.SaveTrajectoryTUM("FrameTrajectory_TUM_Format.txt");
     SLAM.SaveTrajectoryKITTI("FrameTrajectory_KITTI_Format.txt");
+
 
     ros::shutdown();
 

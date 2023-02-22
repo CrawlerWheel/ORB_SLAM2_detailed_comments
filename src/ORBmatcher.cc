@@ -122,6 +122,7 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
         // Step 4 寻找候选匹配点中的最佳和次佳匹配点
         for(vector<size_t>::const_iterator vit=vIndices.begin(), vend=vIndices.end(); vit!=vend; vit++)
         {
+            //idx 就是 帧中与当前地图三D点对应的 候选特征点集 的索引
             const size_t idx = *vit;
 
             // 如果Frame中的该兴趣点已经有对应的MapPoint了,则退出该次循环
@@ -205,7 +206,7 @@ float ORBmatcher::RadiusByViewingCos(const float &viewCos)
 bool ORBmatcher::CheckDistEpipolarLine(const cv::KeyPoint &kp1,const cv::KeyPoint &kp2,const cv::Mat &F12,const KeyFrame* pKF2)
 {
     // Epipolar line in second image l2 = x1'F12 = [a b c]
-    // Step 1 求出kp1在pKF2上对应的极线
+    // Step 1 求出kp1在pKF2上对应的极线  pT * F
     const float a = kp1.pt.x*F12.at<float>(0,0)+kp1.pt.y*F12.at<float>(1,0)+F12.at<float>(2,0);
     const float b = kp1.pt.x*F12.at<float>(0,1)+kp1.pt.y*F12.at<float>(1,1)+F12.at<float>(2,1);
     const float c = kp1.pt.x*F12.at<float>(0,2)+kp1.pt.y*F12.at<float>(1,2)+F12.at<float>(2,2);
@@ -231,7 +232,7 @@ bool ORBmatcher::CheckDistEpipolarLine(const cv::KeyPoint &kp1,const cv::KeyPoin
     return dsqr < 3.84*pKF2->mvLevelSigma2[kp2.octave];
 }
 
-/*
+/**
  * @brief 通过词袋，对关键帧的特征点进行跟踪
  * 步骤
  * Step 1：分别取出属于同一node的ORB特征点(只有属于同一node，才有可能是匹配点)
@@ -370,7 +371,7 @@ int ORBmatcher::SearchByBoW(KeyFrame* pKF,Frame &F, vector<MapPoint*> &vpMapPoin
         }
         else if(KFit->first < Fit->first)
         {
-            // 对齐
+            // 对齐 这里应该是重载了lower_bound函数，对不齐 就往前搜寻和当前Fit->first一样大或者更大的nodeid
             KFit = vFeatVecKF.lower_bound(Fit->first);
         }
         else
@@ -871,7 +872,7 @@ int ORBmatcher::SearchByBoW(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
     return nmatches;
 }
 
-/*
+/**
  * @brief 利用基础矩阵F12极线约束，用BoW加速匹配两个关键帧的未匹配的特征点，产生新的匹配点对
  * 具体来说，pKF1图像的每个特征点与pKF2图像同一node节点的所有特征点依次匹配，判断是否满足对极几何约束，满足约束就是匹配的特征点
  * @param pKF1          关键帧1
@@ -898,6 +899,7 @@ int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F
     cv::Mat C2 = R2w*Cw+t2w; 
     const float invz = 1.0f/C2.at<float>(2);
     // 得到KF1的相机光心在KF2中的坐标，也叫极点，这里是像素坐标
+    // 此处用的是相机投影公式 相机内参
     const float ex =pKF2->fx*C2.at<float>(0)*invz+pKF2->cx;
     const float ey =pKF2->fy*C2.at<float>(1)*invz+pKF2->cy;
 
@@ -997,6 +999,7 @@ int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F
 
                     //? 为什么双目就不需要判断像素点到极点的距离的判断？
                     // 因为双目模式下可以左右互匹配恢复三维点
+                    //双目相机的摆放位置特殊，组成极平面后，光心压根不会在另一帧上产生投影
                     if(!bStereo1 && !bStereo2)
                     {
                         const float distex = ex-kp2.pt.x;
@@ -1042,7 +1045,7 @@ int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F
                         rotHist[bin].push_back(idx1);
                     }
                 }
-            }
+            }//keyframe2 遍历
 
             f1it++;
             f2it++;
@@ -1055,7 +1058,7 @@ int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F
         {
             f2it = vFeatVec2.lower_bound(f1it->first);
         }
-    }
+    }//keyframe1 遍历
 
     // Step 3 用旋转差直方图来筛掉错误匹配对
     if(mbCheckOrientation)
@@ -1096,7 +1099,7 @@ int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F
 
 /**
  * @brief 将地图点投影到关键帧中进行匹配和融合；融合策略如下
- * 1.如果地图点能匹配关键帧的特征点，并且该点有对应的地图点，那么选择观测数目多的替换两个地图点
+ * 1.如果地图点能匹配关键帧的特征点，并且该点有对应的地图点，将两个MapPoint合并（选择观测数多的）
  * 2.如果地图点能匹配关键帧的特征点，并且该点没有对应的地图点，那么为该点添加该投影地图点
 
  * @param[in] pKF           关键帧

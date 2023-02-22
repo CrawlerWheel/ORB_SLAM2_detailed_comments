@@ -41,7 +41,7 @@ MapPoint::MapPoint(const cv::Mat &Pos,  //地图点的世界坐标
                    Map* pMap):          //地图点所存在的地图
     mnFirstKFid(pRefKF->mnId),              //第一次观测/生成它的关键帧 id
     mnFirstFrame(pRefKF->mnFrameId),        //创建该地图点的帧ID(因为关键帧也是帧啊)
-    nObs(0),                                //被观测次数
+    nObs(0),                                //被观测次数 描述和关键帧的关系
     mnTrackReferenceForFrame(0),            //放置被重复添加到局部地图点的标记
     mnLastFrameSeen(0),                     //是否决定判断在某个帧视野中的变量
     mnBALocalForKF(0),                      //
@@ -51,8 +51,8 @@ MapPoint::MapPoint(const cv::Mat &Pos,  //地图点的世界坐标
     mnCorrectedReference(0),                //
     mnBAGlobalForKF(0),                     //
     mpRefKF(pRefKF),                        //
-    mnVisible(1),                           //在帧中的可视次数
-    mnFound(1),                             //被找到的次数 和上面的相比要求能够匹配上
+    mnVisible(1),                           //在帧中的可视次数,只是说在视野内并不一定匹配上了
+    mnFound(1),                             //被找到的次数 和上面的相比要求能够匹配上 描述和普通帧的关系
     mbBad(false),                           //坏点标记
     mpReplaced(static_cast<MapPoint*>(NULL)), //替换掉当前地图点的点
     mfMinDistance(0),                       //当前地图点在某帧下,可信赖的被找到时其到关键帧光心距离的下界
